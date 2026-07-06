@@ -2,15 +2,18 @@ package com.jyrp.agentcompany.controller;
 
 import com.jyrp.agentcompany.agent.Agent;
 import com.jyrp.agentcompany.service.ClaudeService;
+import com.jyrp.agentcompany.service.CompanyService;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 public class HelloController {
 
-    private final ClaudeService claudeService;              // ① 필드 선언
+    private final ClaudeService claudeService;
+    private final CompanyService companyService;// ① 필드 선언
 
-    public HelloController(ClaudeService claudeService) {   // ② 생성자
-        this.claudeService = claudeService;                 // ③ 받아서 저장
+    public HelloController(ClaudeService claudeService, CompanyService companyService) {   // ② 생성자
+        this.claudeService = claudeService;
+        this.companyService = companyService;
     }
 
     @GetMapping("/hello")
@@ -41,6 +44,10 @@ public class HelloController {
                 claudeService
         );
         return reviewer.work(code);
+    }
+    @PostMapping("/project")
+    public String project(@RequestBody String request){
+        return companyService.runProject(request);
     }
 
 }
