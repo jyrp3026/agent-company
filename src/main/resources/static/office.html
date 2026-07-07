@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>에이전트 회사</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        body { background: #222; color: white; font-family: sans-serif; }
+    </style>
+</head>
+<body>
+<h2>🏢 에이전트 회사 사무실</h2>
+<div id="game"></div>
+
+<script>
+    // 이름 → 캐릭터 저장소 (자바의 Map 같은 것)
+    const characters = {};
+    let bubbleText;
+    let scene;
+
+    // 직원마다 다른 색 (순서대로 배정)
+    const colors = [0x9b59b6, 0x3498db, 0xe74c3c, 0x2ecc71, 0xf39c12];
+
+    const config = {
+        type: Phaser.AUTO,
+        width: 640,
+        height: 450,
+        parent: "game",
+        backgroundColor: "#8B7355",
+        scene: { create: create }
+    };
+    new Phaser.Game(config);
+
+    function create() {
+        scene = this;
+        bubbleText = this.add.text(20, 415, "직원 명단 불러오는 중...", { fontSize: "16px" });
+
+        // ★ 서버에서 직원 명단 받아오기
+        fetch("/agents")
+            .then(res => res.json())
+            .then(agents => {
+                agents.forEach((agent, i) => {
+                    const x = agent.positionX;
+                    const y = agent.positionY;
+
+                    // 책상 + 이름표 + 캐릭터
+                    scene.add.rectangle(x, y, 90, 45, 0x654321);
+                    scene.add.text(x - 40, y - 45, agent.name, { fontSize: "14px" });
+                    const char = scene.add.rectangle(x, y + 55, 30, 30, colors[i % colors.length]);
+
+                    // 이름으로 캐릭터 등록
+                    characters[agent.name] = char;
+                });
+                bubbleText.setText("직원 " + agents.length + "명 출근 완료. 대기 중...");
+            });
+    }
+
+    function showMessage(text) {
+        bubbleText.setText(text);
+    }
+
+    function bounce(character) {
+        scene.tweens.add({
+            targets: character,
+            y: character.y - 20,
+            duration: 150,
+            yoyo: true,
+            repeat: 2
+        });
+    }
+
+    // WebSocket 연결
+    const socket = new WebSocket("ws://localhost:8080/ws");
+    const stompClient = Stomp.over(socket);
+
+    stompClient.connect({}, function () {
+        stompClient.subscribe("/topic/office", function (message) {
+            const text = message.body;
+            showMessage(text);
+
+            // ★ 등록된 모든 직원 이름을 검사해서, 멘트에 이름이 있으면 그 캐릭터가 통통
+            for (const name in characters) {
+                if (text.includes(name)) {
+                    bounce(characters[name]);
+                }
+            }
+        });
+    });
+</script>
+</body>
+</html>

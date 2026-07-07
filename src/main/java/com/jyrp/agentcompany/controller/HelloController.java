@@ -1,19 +1,25 @@
 package com.jyrp.agentcompany.controller;
 
 import com.jyrp.agentcompany.agent.Agent;
+import com.jyrp.agentcompany.domain.AgentEntity;
+import com.jyrp.agentcompany.domain.AgentRepository;
 import com.jyrp.agentcompany.service.ClaudeService;
 import com.jyrp.agentcompany.service.CompanyService;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 public class HelloController {
 
     private final ClaudeService claudeService;
     private final CompanyService companyService;// ① 필드 선언
+    private final AgentRepository agentRepository;
 
-    public HelloController(ClaudeService claudeService, CompanyService companyService) {   // ② 생성자
+    public HelloController(ClaudeService claudeService, CompanyService companyService, AgentRepository agentRepository) {   // ② 생성자
         this.claudeService = claudeService;
         this.companyService = companyService;
+        this.agentRepository = agentRepository;
     }
 
     @GetMapping("/hello")
@@ -46,8 +52,13 @@ public class HelloController {
         return reviewer.work(code);
     }
     @PostMapping("/project")
-    public String project(@RequestBody String request){
-        return companyService.runProject(request);
+    public String project(@RequestBody ProjectRequest request){
+        return companyService.runProject(request.userRequest());
+    }
+
+    @GetMapping("/agents")
+    public List<AgentEntity> agent() {
+        return agentRepository.findAll();
     }
 
 }
