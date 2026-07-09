@@ -29,9 +29,14 @@
         height: 450,
         parent: "game",
         backgroundColor: "#8B7355",
-        scene: { create: create }
+        scene: { preload: preload, create: create }
     };
     new Phaser.Game(config);
+
+    function preload() {
+        this.load.spritesheet("staff", "assets/agents_sprites.png",
+            { frameWidth: 32, frameHeight: 32 });
+    }
 
     function create() {
         scene = this;
@@ -48,7 +53,7 @@
                     // 책상 + 이름표 + 캐릭터
                     scene.add.rectangle(x, y, 90, 45, 0x654321);
                     scene.add.text(x - 40, y - 45, agent.name, { fontSize: "14px" });
-                    const char = scene.add.rectangle(x, y + 55, 30, 30, colors[i % colors.length]);
+                    const char = scene.add.sprite(x, y + 55, "staff", i * 4).setScale(1.5);
 
                     // 이름으로 캐릭터 등록
                     characters[agent.name] = char;
