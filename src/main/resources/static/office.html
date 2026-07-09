@@ -18,6 +18,7 @@
     // 이름 → 캐릭터 저장소 (자바의 Map 같은 것)
     const characters = {};
     const desks = {};
+    const bubbles = {};
     let bubbleText;
     let scene;
 
@@ -32,7 +33,19 @@
         backgroundColor: "#8B7355",
         scene: { preload: preload, create: create }
     };
+
     new Phaser.Game(config);
+
+    function say(name, text) {
+        const bubble = bubbles[name];
+
+        bubble.setText(text);
+        bubble.setVisible(true)              // ① 보이게 하기
+
+        setTimeout(function () {
+            bubble.setVisible(false)          // ② 다시 숨기기
+        }, 3000);
+    }
 
     function preload() {
         this.load.spritesheet("staff", "assets/agents_sprites.png",
@@ -68,7 +81,16 @@
 
                     // 이름으로 캐릭터 등록
                     characters[agent.name] = char;
+                    const bubble = scene.add.text(x, y - 70, "", {
+                        fontSize: "12px",
+                        color: "#000",
+                        backgroundColor: "#fff",
+                        padding: { x: 6, y: 4 }
+                    }).setOrigin(0.5).setVisible(false);
+
+                    bubbles[agent.name] = bubble;
                 });
+
                 bubbleText.setText("직원 " + agents.length + "명 출근 완료. 대기 중...");
             });
 
@@ -145,6 +167,11 @@
                 bounce(characters["김테스터"]);
             } else if (text.includes("최종 보고서")) {
                 bounce(characters["유팀장"]);
+            }
+            for (const name in characters) {
+                if (text.startsWith(name)) {       // 멘트가 그 이름으로 시작하면
+                    say(name, text.split(": ")[1]); // 콜론 뒤 내용만 말풍선에
+                }
             }
         });
 
