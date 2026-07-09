@@ -17,6 +17,7 @@
 <script>
     // 이름 → 캐릭터 저장소 (자바의 Map 같은 것)
     const characters = {};
+    const desks = {};
     let bubbleText;
     let scene;
 
@@ -42,6 +43,7 @@
         scene = this;
         bubbleText = this.add.text(20, 415, "직원 명단 불러오는 중...", { fontSize: "16px" });
 
+
         // ★ 서버에서 직원 명단 받아오기
         fetch("/agents")
             .then(res => res.json())
@@ -49,17 +51,44 @@
                 agents.forEach((agent, i) => {
                     const x = agent.positionX;
                     const y = agent.positionY;
+                    desks[agent.name] = { x, y };
 
                     // 책상 + 이름표 + 캐릭터
                     scene.add.rectangle(x, y, 90, 45, 0x654321);
                     scene.add.text(x - 40, y - 45, agent.name, { fontSize: "14px" });
                     const char = scene.add.sprite(x, y + 55, "staff", i * 4).setScale(1.5);
 
+                    scene.anims.create({
+                        key: "walk-" + agent.name,   // 이름으로 구분 (예: "walk-박개발")
+                        frames: scene.anims.generateFrameNumbers("staff",
+                            { start: i * 4 + 1, end: i * 4 + 2 }),
+                        frameRate: 6,
+                        repeat: -1
+                    });
+
                     // 이름으로 캐릭터 등록
                     characters[agent.name] = char;
                 });
                 bubbleText.setText("직원 " + agents.length + "명 출근 완료. 대기 중...");
             });
+
+    }
+    function walkTo(name, targetX, targetY, onArrive) {
+        const char = characters[name];
+
+        char.play("walk-" + name);           // ① 다리 움직이기 시작
+
+        scene.tweens.add({
+            targets: char,
+            x: targetX,                       // ② 목적지까지 이동
+            y: targetY,
+            duration: 1500,                   // 1.5초 동안
+            onComplete: function () {
+                char.stop();                  // ③ 도착: 애니메이션 정지
+                char.setFrame(Math.floor(char.frame.name / 4) * 4);           // 서있기 프레임으로 복귀
+                if (onArrive) onArrive();     // 도착 후 할 일 실행 (선택)
+            }
+        });
     }
 
     function showMessage(text) {
@@ -75,6 +104,21 @@
             repeat: 2
         });
     }
+    function visitDesk(visitor, host) {
+        walkTo(visitor, desks[host].x - 50, desks[host].y + 55);
+    }
+    function goHome(name) {
+        walkTo(name, desks[name].x, desks[name].y + 55);
+    }
+
+    function cheer(name) {
+        const char = characters[name];
+        const standFrame = Math.floor(char.frame.name / 4) * 4;
+        char.setFrame(standFrame + 3);
+        setTimeout(function () {
+            char.setFrame(standFrame);
+        }, 1500);
+    }
 
     // WebSocket 연결
     const socket = new WebSocket("ws://localhost:8080/ws");
@@ -85,6 +129,25 @@
             const text = message.body;
             showMessage(text);
 
+            if (text.includes("요구사항 분석")) {
+                visitDesk("손기획", "유팀장");
+            } else if (text.includes("코드 작성 시작")) {
+                goHome("손기획");
+            } else if (text.includes("코드 검토")) {
+                visitDesk("박개발", "남리뷰");
+            } else if (text.includes("승인")) {
+                cheer("손기획"); cheer("박개발"); cheer("남리뷰");
+                cheer("김테스터"); cheer("유팀장");
+                goHome("박개발");
+            } else if (text.includes("반려")) {
+                goHome("박개발");
+            } else if (text.includes("테스트 코드")) {
+                bounce(characters["김테스터"]);
+            } else if (text.includes("최종 보고서")) {
+                bounce(characters["유팀장"]);
+            }
+        });
+
             // ★ 등록된 모든 직원 이름을 검사해서, 멘트에 이름이 있으면 그 캐릭터가 통통
             for (const name in characters) {
                 if (text.includes(name)) {
@@ -92,7 +155,6 @@
                 }
             }
         });
-    });
 </script>
 </body>
 </html>
